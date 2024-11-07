@@ -52,7 +52,7 @@ class AlgoSystem:
             run_duration: 运行时长(秒)
         """
         try:
-            self.logger.info("正在启动算法系统...")
+            self.logger.info(f"正在启动算法系统... (将运行 {run_duration} 秒)")
             start_time = datetime.now()
             end_time = start_time + timedelta(seconds=run_duration)
             
@@ -66,18 +66,24 @@ class AlgoSystem:
             
             # 主循环,每5秒打印一次状态
             while datetime.now() < end_time:
-                time.sleep(5)
-                self.logger.info("\n当前任务状态:")
+                remaining = (end_time - datetime.now()).seconds
+                self.logger.info(f"\n当前任务状态 (剩余时间: {remaining}秒):")
                 self._print_tasks_status()
+                time.sleep(min(5, remaining))
                 
             # 打印最终性能统计
             self.logger.info("\n=== 最终性能统计 ===")
             self._print_performance_metrics()
             
         except KeyboardInterrupt:
-            self.logger.info("正在关闭系统...")
+            self.logger.info("\n系统被用户中断")
         finally:
+            self.logger.info("\n正在停止所有任务...")
+            # 确保停止所有任务和监控线程
             self.task_manager.stop_all_tasks()
+            # 等待资源释放
+            time.sleep(0.5)
+            self.logger.info("系统已完全停止")
             
     def _print_tasks_status(self):
         """打印所有任务状态"""
@@ -102,19 +108,28 @@ class AlgoSystem:
                 
                 self.logger.info(f"\n任务 {task.name} 性能指标:")
                 self.logger.info(f"总处理帧数: {metrics.get('frame_count', 0)}")
+                
+                # 处理时间统计
                 if 'process_times' in metrics:
                     times = metrics['process_times']
                     if times:
-                        avg_time = sum(times) / len(times)
-                        self.logger.info(f"平均处理时间: {avg_time:.3f}秒")
+                        self.logger.info(f"平均处理时间: {np.mean(times):.3f}秒")
                         self.logger.info(f"最大处理时间: {max(times):.3f}秒")
                         self.logger.info(f"最小处理时间: {min(times):.3f}秒")
+                        self.logger.info(f"处理帧率: {len(times)/sum(times):.1f} FPS")
                 
+                # API响应时间统计
+                if 'api_response_times' in metrics:
+                    api_times = metrics['api_response_times']
+                    if api_times:
+                        self.logger.info(f"平均API响应时间: {np.mean(api_times):.3f}秒")
+                
+                # 匹配统计
                 if 'match_counts' in metrics:
                     matches = metrics['match_counts']
                     if matches:
-                        avg_matches = sum(matches) / len(matches)
-                        self.logger.info(f"平均匹配数: {avg_matches:.2f}")
+                        self.logger.info(f"平均匹配数: {np.mean(matches):.2f}")
+                        self.logger.info(f"总匹配数: {sum(matches)}")
                 
                 self.logger.info("-" * 50)
 

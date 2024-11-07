@@ -62,6 +62,8 @@ class BlacklistAlgorithm(BaseAlgorithm):
         self.match_threshold = self.algo_config.get('match_threshold', 0.7)
         self._frame_count = 0
         self._last_process_time = None
+        # 添加停止标志
+        self._running = True
         
     def initialize(self) -> bool:
         """初始化算法资源"""
@@ -85,6 +87,15 @@ class BlacklistAlgorithm(BaseAlgorithm):
 
     def process_frame(self, frame: np.ndarray) -> Dict[str, Any]:
         """处理单帧图像"""
+        if not self._running:
+            return {
+                'matches': [],
+                'frame_info': {
+                    'frame_id': self._frame_count,
+                    'status': 'stopped',
+                    'timestamp': datetime.now().isoformat()
+                }
+            }
         start_time = time.time()
         self._frame_count += 1
         
@@ -207,6 +218,10 @@ class BlacklistAlgorithm(BaseAlgorithm):
             bool: 释放是否成功
         """
         try:
+            # 先设置停止标志
+            self._running = False
+            # 等待最后一帧处理完成
+            time.sleep(0.1)
             # 清理人脸API连接
             if self.face_api:
                 self.face_api = None
@@ -221,3 +236,10 @@ class BlacklistAlgorithm(BaseAlgorithm):
         except Exception as e:
             self.logger.error(f"释放资源失败: {str(e)}")
             return False
+
+    def stop(self):
+        """停止算法"""
+        self._running = False
+        # 等待最后一帧处理完成
+        time.sleep(0.1)
+        self.logger.info("黑名单算法已停止")

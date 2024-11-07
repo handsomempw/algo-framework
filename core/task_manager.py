@@ -57,6 +57,10 @@ class TaskConfig:
         """任务是否启用"""
         return self.status == "启用"
 
+    @enabled.setter
+    def enabled(self, value: bool):
+        self.status = "启用" if value else "禁用"
+
     @classmethod
     def from_api_response(cls, data: dict) -> List['TaskConfig']:
         """从API响应数据创建测试任务配置"""
@@ -97,17 +101,17 @@ class TaskManager:
     DEFAULT_API_URL = "http://192.168.100.137:30337/api/aisp-video-compute-manager/v1"
     
     def __init__(self, api_base_url=None):
-        self.tasks: Dict[str, TaskConfig] = {}
+        self._running = True
+        self._lock = threading.Lock()
+        self.tasks = {}
         self.algo_manager = AlgorithmManager()
         self.resource_manager = ResourceManager()
-        self._lock = threading.Lock()
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(self.__class__.__module__)
         # 使用传入的API地址或默认地址
         self.api_base_url = api_base_url or self.DEFAULT_API_URL
         self.logger.info(f"初始化任务管理器, API地址: {self.api_base_url}")
         
         self._monitor_thread = None
-        self._running = False
         
     def _fetch_tasks(self):
         """从API获取任务列表
@@ -244,7 +248,7 @@ class TaskManager:
     def _task_process_loop(self, task: TaskConfig, stream: VideoStream, instance: BaseAlgorithm):
         """任务处理循环"""
         try:
-            while task.enabled and instance.is_running:
+            while task.enabled and instance.is_running and self._running:
                 try:
                     frame = stream.read()
                     if frame is None:
@@ -266,6 +270,7 @@ class TaskManager:
             # 确保资源被正确释放
             if instance:
                 instance.release()
+                self.logger.info(f"任务 {task.task_id} 处理循环已停止")
             
     def stop_task(self, task_id: str) -> bool:
         """停止任务"""
@@ -336,15 +341,34 @@ class TaskManager:
             
     def start_all_tasks(self):
         """启动所有已启用的任务"""
+        self._running = True
         for task_id, task in self.tasks.items():
             if task.enabled:
                 self.start_task(task_id)
                 
     def stop_all_tasks(self):
-        """停止所有运行中的任务"""
-        for task_id in list(self.tasks.keys()):
-            self.stop_task(task_id)
-                
+        """停止所有任务"""
+        with self._lock:
+            # 先设置停止标志
+            self._running = False
+            time.sleep(0.1)  # 给处理循环一点时间响应停止信号
+            
+            # 停止所有任务
+            for task_id in list(self.tasks.keys()):
+                try:
+                    # 先禁用任务
+                    task = self.tasks[task_id]
+                    task.enabled = False
+                    
+                    # 等待处理线程结束
+                    if task.process_thread and task.process_thread.is_alive():
+                        task.process_thread.join(timeout=1.0)
+                        
+                    # 停止任务实例
+                    self.stop_task(task_id)
+                except Exception as e:
+                    self.logger.error(f"停止任务 {task_id} 失败: {str(e)}")
+
     def start_monitor(self):
         """启动任务监控线程"""
         self._running = True
@@ -401,3 +425,9 @@ class TaskManager:
             
         except Exception as e:
             self.logger.error(f"处理结果异常: {str(e)}")
+
+    def stop_monitor(self):
+        """停止任务监控线程"""
+        self._running = False
+        if self._monitor_thread and self._monitor_thread.is_alive():
+            self._monitor_thread.join(timeout=1.0)  # 等待监控线程结束
