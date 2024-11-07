@@ -1,0 +1,36 @@
+# 算法配置
+algorithm:
+  face_api_url: "http://192.168.100.137:32316/api/aisp-face-center"
+  blacklist_db: "aa4"
+  match_threshold: 0.7
+  min_face_size: 100
+  max_results: 5
+  detection_threshold: 0.5
+  api_timeout: [5, 30]
+  performance_monitor: true
+
+# 性能监控配置
+performance:
+  enabled: true
+  metrics:
+    - frame_process_time
+    - face_detection_time
+    - api_response_time
+    - match_count
+  interval: 60
+  save_path: "./performance_logs/"
+
+# 日志配置  
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "algo.log"
+  max_size: 10485760  # 10MB
+  backup_count: 5
+
+# 视频流配置
+video:
+  buffer_size: 1
+  reconnect_attempts: 3
+  reconnect_delay: 1.0
+  frame_quality: 85
