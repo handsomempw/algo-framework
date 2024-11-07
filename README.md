@@ -106,6 +106,7 @@ algo_framework/
 │   └── output_manager.py
 ├── algorithms/             # 算法实现
 │   ├── base_algorithm.py
+<<<<<<< HEAD
 │   ├── face_detection/
 │   └── object_tracking/
 ├── utils/                  # 工具函数
@@ -113,6 +114,14 @@ algo_framework/
 │   └── performance.py
 ├── config/                 # 配置文件
 │   └── config.yaml
+=======
+│   ├── blacklist/
+│       ├── blacklist_algorithm.py
+│       └── face_api.py
+│   └── others/
+├── __init__.py
+├── config.yaml                # 配置文件
+>>>>>>> ecbcc0cb0d6e7a94f444e1f64822ba5d0c7c98c0
 └── main.py                # 入口文件
 ```
 
@@ -120,4 +129,8 @@ algo_framework/
 
 ```bash
 python main.py
+<<<<<<< HEAD
 ```
+=======
+```
+>>>>>>> ecbcc0cb0d6e7a94f444e1f64822ba5d0c7c98c0
