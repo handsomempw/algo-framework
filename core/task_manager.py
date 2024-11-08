@@ -73,19 +73,50 @@ class TaskConfig:
             'camera_gb28181_id': '34020000001310000001'
         }
         
-        # 创建两个测试任务
-        for i in range(2):
+        # 创建三个测试任务:两个黑名单检测和一个垃圾检测
+        test_configs = [
+            {
+                'algo_type': 'blacklist',
+                'algo_type_name': '黑名单检测_1',
+                'algo_config': {
+                    'match_threshold': 0.7,
+                    'min_face_size': 100,
+                    'blacklist_db': 'aa4'
+                }
+            },
+            {
+                'algo_type': 'blacklist', 
+                'algo_type_name': '黑名单检测_2',
+                'algo_config': {
+                    'match_threshold': 0.8,
+                    'min_face_size': 120,
+                    'blacklist_db': 'aa4'
+                }
+            },
+            {
+                'algo_type': 'garbage',
+                'algo_type_name': '垃圾检测',
+                'algo_config': {
+                    'triton_url': '192.168.96.136:8942',
+                    'score_threshold': 0.5,
+                    'iou_threshold': 0.5,
+                    'target_labels': ['garbage'],
+                    'roi_area': [[0, 0], [1, 0], [1, 1], [0, 1]],
+                    'model_name': 'base',
+                    'frame_interval': 1
+                }
+            }
+        ]
+        
+        # 创建测试任务
+        for i, config in enumerate(test_configs):
             task = cls(
                 task_id=f"{data.get('id', 'test')}_stream_{i+1}",
                 name=f"视频流测试_{i+1}",
                 **base_info,
-                algo_type="blacklist",
-                algo_type_name=f"黑名单检测_{i+1}",
-                algo_config={
-                    'match_threshold': 0.7 + i*0.1,
-                    'min_face_size': 100 + i*20,
-                    'blacklist_db': 'aa4'
-                },
+                algo_type=config['algo_type'],
+                algo_type_name=config['algo_type_name'],
+                algo_config=config['algo_config'],
                 status='启用'
             )
             tasks.append(task)
