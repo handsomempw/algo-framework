@@ -22,12 +22,12 @@ class VideoStream:
         self.frame_count = 0
         self._running = False
         self._thread = None
-        self._lock = threading.Lock()
+        self._lock = threading.Lock() # 锁（防止多个实例同时拿取帧）
         self.ref_count = 1
         self.logger = logging.getLogger(__name__)
         # 添加帧缓存
-        self._current_frame = None
-        self._frame_ready = threading.Event()
+        self._current_frame = None # 当前帧
+        self._frame_ready = threading.Event() # 帧准备好事件
         self.callbacks = []
         
     def initialize(self) -> bool:
@@ -52,7 +52,7 @@ class VideoStream:
             self.logger.error(f"初始化视频流失败: {str(e)}")
             return False
             
-    def _read_frames(self):
+    def _read_frames(self): # 生产者（不停地从激活的摄像头循环读取帧）
         """读取视频帧的循环"""
         import cv2
         while self._running:
@@ -60,27 +60,27 @@ class VideoStream:
                 if self.cap is None:
                     break
                     
-                ret, frame = self.cap.read()
+                ret, frame = self.cap.read() # 读取帧
                 if not ret:
                     time.sleep(0.01)
                     continue
                     
-                with self._lock:
+                with self._lock: # 锁
                     self.frame_count += 1
                     self._current_frame = frame.copy()
-                    self._frame_ready.set()
+                    self._frame_ready.set() # 设置帧准备好事件
                     
             except Exception as e:
                 self.logger.error(f"读取视频帧异常: {str(e)}")
                 time.sleep(0.1)
                 
-    def read(self) -> Optional[np.ndarray]:
+    def read(self) -> Optional[np.ndarray]: # 消费者（读取帧）
         """读取一帧"""
         if not self.is_opened:
             return None
             
         # 等待新帧
-        self._frame_ready.wait(timeout=1.0)
+        self._frame_ready.wait(timeout=1.0) 
         with self._lock:
             frame = self._current_frame.copy() if self._current_frame is not None else None
             self._frame_ready.clear()
