@@ -1,102 +1,105 @@
-# # # def draw(image, res, cls):
-# # #     from PIL import Image, ImageDraw, ImageFont
-# # #     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-# # #     pil_image = Image.fromarray(image)
-# # #     draw = ImageDraw.Draw(pil_image)
-# # #     font_path = "/workspace/workspace/wumh/STKAITI.TTF" 
-# # #     font_size = 20
-# # #     font = ImageFont.truetype(font_path, font_size)
-# # #     for i, r in enumerate(res):
-# # #         x0, y0 = int(r[0]), int(r[1])
-# # #         x1, y1 = int(r[2]), int(r[3])
-# # #         if x1 < x0:
-# # #             x0, x1 = x1, x0
-# # #         if y1 < y0:
-# # #             y0, y1 = y1, y0
-# # #         draw.rectangle([(x0, y0), (x1, y1)], outline="green", width=2)
-# # #         text = "{}:{}".format(cls[i].decode('utf-8'), round(float(r[4]), 2))
-# # #         draw.text((max(10, x0), max(20, y0) - font_size), text, font=font, fill=(0, 0, 255))
-# # #     image = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
-# # #     return image
-
-# # #    # -------------------------------绘图-------------------------------------
-# # #         res = []
-# # #         for i in range(len(remain_bboxes)):
-# # #             bbox = list(remain_bboxes[i])
-# # #             bbox.append(float(remain_scores[i]))
-# # #             res.append(bbox)
-# # #         detection_res = self.draw(frame, res, remain_labels)
-# # #         output_path = "/workspace/workspace/wumh/wuminghui/4_Garbage_overflow_detection/result/"
-# # #         if len(remain_bboxes) > 0:
-# # #             cv2.imwrite(f'{output_path}{self.task_id}.jpg', detection_res)
-# # #         # -------------------------------------------------------------------------
-
-
 import requests
 import json
-import time
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
+def get_beijing_time():
+    """获取北京时间"""
+    utc_now = datetime.now(timezone.utc)
+    beijing_tz = timezone(timedelta(hours=8))
+    beijing_time = utc_now.astimezone(beijing_tz)
+    return beijing_time.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
 
 def generate_snowflake_id():
-    """
-    生成一个基于时间戳的简单雪花ID
-    """
-    return str(int(time.time() * 1000))
-
-def get_current_time():
-    """
-    获取当前时间的ISO格式字符串
-    格式:YYYY-MM-DD HH:mm:ss
-    """
-    return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
+    """生成雪花ID"""
+    return str(int(datetime.now().timestamp() * 1000))
 
 def save_data(data_json):
-    """
-    保存数据到指定服务器。
-
-    Args:
-        data_json (dict): 需要保存的数据，以字典形式给出。
-
-    Returns:
-        None
-    """
+    """保存数据到指定服务器"""
     url = "http://192.168.100.137:30337/api/aisp-video-compute-manager/v1/events/_batch_create"
     headers = {'Content-Type': 'application/json'}
     payload = json.dumps(data_json)
-    requests.request("POST", url, headers=headers, data=payload)
+    response = requests.request("POST", url, headers=headers, data=payload)
+    print(f"保存结果: {response.status_code}")
+    return response
 
 if __name__ == "__main__":
+    # 构造垃圾检测事件数据
     data_json = {
-        "events": [
-            {
-                # 必需字段
-                "id": generate_snowflake_id(),  # 雪花ID
-                "name": "test123",                        # 事件名称
-                "camera_id": generate_snowflake_id(),      # 摄像头ID
-                "content": {                               # 事件数据
-                    "algorithm_type": "image-object-detection",
-                    "score": 0.95,
-                    "label": "person",
-                    "iou": 0.8,
-                    "bounding_box": [[390, 263], [1507, 263], [1507, 770], [390, 770]],
-                    # "target_image_path": "app/aisp-video-compute-manager/image/1731032261840811.jpg",
-                    "image_path": "app/aisp-video-compute-manager/image/1854721181547106304.jpg"
-                },
-                "config": {                               # 触发配置数据
-                    "algorithm_type": "image-object-detection",
-                    "score": 0.8,
-                    "iou": 0.6,
-                    "label": ["person"],
-                    "bounding_box": [[852, 640], [1092, 640], [1092, 958], [852, 958]],
-                    "bounding_box_type": "矩形"
-                },
-                "task_id": generate_snowflake_id(),       # 触发算法任务id
-                "algorithm_type": "image-object-detection", # 算法类型
-                "created_at": get_current_time(),          # 创建时间
-                "analysis_at": get_current_time()          # 分析完成时间
-            }
-        ]
-        }
-    save_data(data_json)
+        "events": [{
+      "id": "7261634464813305857",
+      "name": "event123",
+      "camera_id": "7199616326262984705",
+      "camera_name": "观乾",
+      "camera_city_code": "",
+      "camera_address": "",
+      "camera_gb28181_id": "34020000001310000001",
+      "running_side": {
+        "running_side": "云平台"
+      },
+      "content": {
+        "score": 1900.920295715332,
+        "label": "垃圾",
+        "iou": 55.283808933002476,
+        "bounding_box": [
+          [
+            24.0,
+            571.0
+          ],
+          [
+            2504.0,
+            571.0
+          ],
+          [
+            2504.0,
+            1403.0
+          ],
+          [
+            24.0,
+            1403.0
+          ]
+        ],
+        "target_image_path": "app/aisp-video-compute-manager/image/17313085709281695.jpg",
+        "image_path": "app/aisp-video-compute-manager/image/17313085709281695.jpg",
+        "algorithm_type": "garbage-detection"
+      },
+      "config": {
+        "algorithm_type": "garbage-detection",
+        "score": 10.0,
+        "iou": 10.0,
+        "label": [
+          "垃圾"
+        ],
+        "bounding_box": [
+          [
+            0,
+            0
+          ],
+          [
+            1400,
+            0
+          ],
+          [
+            1400,
+            1400
+          ],
+          [
+            0,
+            1400
+          ]
+        ],
+        "bounding_box_type": "矩形"
+      },
+      "task_id": "7261541328882200577",
+      "algorithm_type": "garbage-detection",
+      "algorithm_type_name": "垃圾满溢检测",
+      "created_at": "2024-11-11 15:02:51.205",
+      "analysis_at": "2024-11-11 15:02:51.205"
+    }
+  ]
+}
+    
+    # 保存数据并打印结果
+    print("开始保存事件数据...")
+    print(f"事件数据: {json.dumps(data_json, ensure_ascii=False, indent=2)}")
+    response = save_data(data_json)
+    print("事件数据保存完成")

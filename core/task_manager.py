@@ -68,7 +68,7 @@ class TaskConfig:
         
         # 基础任务信息
         base_info = {
-            'camera_name': '测试相机',
+            'camera_name': '观乾',
             'camera_id': '7199616326262984705',
             'camera_gb28181_id': '34020000001310000001'
         }
@@ -98,10 +98,10 @@ class TaskConfig:
                 'algo_type_name': '垃圾检测',
                 'algo_config': {
                     'triton_url': '192.168.96.136:8942',
-                    'score_threshold': 0.5,
-                    'iou_threshold': 0.5,
-                    'target_labels': ['garbage'],
-                    'roi_area': [[0, 0], [1, 0], [1, 1], [0, 1]],
+                    'score_threshold': 0.1,
+                    'iou_threshold': 0.1,
+                    'target_labels': ['垃圾'],
+                    'roi_area': [[0, 0], [1400, 0], [1400, 1400], [0, 1400]],
                     'model_name': 'base',
                     'frame_interval': 1
                 }
@@ -111,7 +111,7 @@ class TaskConfig:
         # 创建测试任务
         for i, config in enumerate(test_configs):
             task = cls(
-                task_id=f"{data.get('id', 'test')}_stream_{i+1}",
+                task_id=f"{data.get('id', 'test')}",
                 name=f"视频流测试_{i+1}",
                 **base_info,
                 algo_type=config['algo_type'],
@@ -238,9 +238,18 @@ class TaskManager:
                     self.logger.info(f"复用已有视频流: {stream_url}")
                     
                 # 创建并启动算法实例
-                instance_id = f"{task.algo_type}_{task.task_id}"
+                instance_id = task.task_id  # 直接使用任务ID作为实例ID
                 if not task.instance_id:
-                    if not self.algo_manager.create_instance(task.algo_type, instance_id, task.algo_config):
+                    # 补充算法配置中的相机信息
+                    algo_config = task.algo_config.copy()
+                    algo_config.update({
+                        'camera_id': task.camera_id,
+                        'camera_name': task.camera_name,
+                        'camera_gb28181_id': task.camera_gb28181_id,
+                        'task_id': task.task_id
+                    })
+                    
+                    if not self.algo_manager.create_instance(task.algo_type, instance_id, algo_config):
                         raise RuntimeError(f"创建算法实例失败: {instance_id}")
                     task.instance_id = instance_id
                     
